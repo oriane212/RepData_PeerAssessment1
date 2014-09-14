@@ -12,40 +12,38 @@ activity <- read.csv("activity.csv")
 1. Make a histogram of the total number of steps taken each day
 
 ```{r}
-x <- tapply(activity$steps, activity$date, sum)
-hist(x, main="Total Number of Steps per Day", breaks=60, col="red", xlab="Total number of steps")
+x <- aggregate(steps ~ date, activity, sum)
+hist(x$steps, main = "Total Number of Steps per Day", breaks = 60, col = "red", xlab = "Total number of steps")
+
 ```
 
-2. Calculate and report the **mean** and **median** total number of steps taken per day
-
+2. Calculate and report the **mean** and **median** total number of steps taken per day.
 
 ```{r}
-mean(as.numeric(x), na.rm = TRUE)
+summary(x$steps)
 ```
 
-Median =
-```{r}
-median(as.numeric(x), na.rm = TRUE)
-```
-
+- In the summary above, we see that the mean and median are 10,800.
 
 ## What is the average daily activity pattern?
 
 1. Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
 
 ```{r}
-y <- tapply(activity$steps, activity$interval, mean, na.rm=TRUE)
-plot(y, type="l", main="Average Daily Activity Pattern", cex.main=.75, cex.lab=.75, cex.axis=.6, ylab="Number of Steps", xlab="Interval")
+y <- aggregate(steps ~ interval, activity, mean)
+plot(y$interval, y$steps, type = "l", main = "Average Daily Activity Pattern", cex.main = 0.75, cex.lab = 0.75, cex.axis = 0.6, ylab = "Average Number of Steps", xlab = "5-Minute Interval")
 ```
 
 2. Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
 
 ```{r}
-subset(y, y== max(y))
+# locate the index of the dataframe with the max value
+maxIndex <- which.max(y$steps)
+# get the max value and interval using the index
+y[maxIndex,]
 ```
 
-From this we see that the 5-minute interval containing the maximum number of steps is 835 (with a max value of about 206). 
-
+- From the above we see that the 5-minute interval containing the maximum number of steps is 835 (with a max value of about 206). 
 
 ## Imputing missing values
 
@@ -57,66 +55,48 @@ Note that there are a number of days/intervals where there are missing values (c
 na <- is.na(activity)
 summary(na)
 ```
-The summary tells us that the number of missing values (TRUE) is 2304.
+- The summary tells us that the number of missing values (TRUE) is 2,304.
 
 
 2. Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
 
-For this, the average of a given day was used to fill in missing values for that day. 
+- Each missing value in the new dataframe will be replaced with the mean number of steps for its 5-minute interval.
 
-To calculate the average number of steps taken per day:
-```{r}
-date_steps <- aggregate(steps ~ date, activity, mean)
-```
 
 3. Create a new dataset that is equal to the original dataset but with the missing data filled in.
 
 ```{r}
+# creates a new dataframe equal to the original
+NewData <- data.frame(activity)
+    
+# checks each row of the new dataframe for missing values and replaces it with the average number of steps for the given 5-minute interval (referenced from the "y_new" dataset containing avg steps by interval, made earlier to generate the time series plot)
 
-NewData2 <- data.frame(activity)
-
-#create new dataset equal to original but with missing data filled in
-        
-for (i in 1:nrow(NewData2)){
-  if (is.na(NewData2$steps[i])){
-          #print (NewData2$steps[i])
-          #print (i)
-    date_Value <- NewData2$date[i] #correct
-    #print (date_Value)
-    #indexing <- subset(date_steps, date_steps == date_Value)
-    indexing <- which(date_steps$date == date_Value) #correct
-    #print (ind)
-    if (length(indexing) > 0){
-    meanValue <- date_steps$steps[indexing] #correct
-    #print (meanValue)
-    NewData2$steps[i] <- meanValue #correct
-    #print (NewData2$steps[i]) 
-            }
-        else {NewData2$steps[i] <- 0}   
-   }
+for (i in 1:nrow(NewData)) {
+        if (is.na(NewData$steps[i])) {
+                interval <- NewData$interval[i]
+                index <- which(y$interval == interval)
+                avgSteps <- y$steps[index]
+                NewData$steps[i] <- avgSteps 
+        }
 }
 ```
 
 4. Make a histogram of the total number of steps taken each day and Calculate and report the **mean** and **median** total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
 
 ```{r}
-x2 <- tapply(NewData2$steps, NewData2$date, sum)
-hist(x2, main="Total Number of Steps per Day", breaks=60, col="red", xlab="Total number of steps")
+x_new <- aggregate(steps ~ date, NewData, sum)
+hist(x_new$steps, main = "Total Number of Steps per Day", breaks = 60, col = "red", xlab = "Total number of steps")
 ```
-
 
 ```{r}
-mean(x2)
+# original
+summary(x$steps)
+
+# new
+summary(x_new$steps)
 ```
-Mean = 9354.23
 
-```{r}
-median(x2)
-```
-Median = 10395
-
-These values differ from the estimated Mean (10766.19) and Median (10765) values earlier. This makes sense given that new estimated values were introduced into the dataset in place of missing values. 
-
+- Above, we can see that the strategy to replace missing values worked very well, since the new estimated mean value and estimated median value are still 10,800. This makes sense given that the mean values from the original dataframe were simply used to replace all of the missing values. 
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
@@ -125,15 +105,15 @@ For this part the weekdays() function may be of some help here. Use the dataset 
 1. Create a new factor variable in the dataset with two levels – “weekday” and “weekend” indicating whether a given date is a weekday or weekend day.
 
 ```{r}
-NewData2$date <- as.Date(NewData2$date, "%Y-%m-%d")
-NewData2$day <- weekdays(NewData2$date)
-NewData2$dayType2 <- c("")
+NewData$date <- as.Date(NewData$date, "%Y-%m-%d")
+NewData$day <- weekdays(NewData$date)
+NewData$dayType2 <- c("")
 
-for (i in 1:nrow(NewData2)){
-        if (NewData2$day[i] == "Saturday" | NewData2$day[i] == "Sunday"){
-                NewData2$dayType2[i] <- "Weekend"
+for (i in 1:nrow(NewData)){
+        if (NewData$day[i] == "Saturday" | NewData$day[i] == "Sunday"){
+                NewData$dayType2[i] <- "Weekend"
         }
-        else {NewData2$dayType2[i] <- "Weekday"}
+        else {NewData$dayType2[i] <- "Weekday"}
 }
 
 ```
@@ -141,13 +121,8 @@ for (i in 1:nrow(NewData2)){
 2. Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis). 
 
 ```{r}
-weekends <- subset(NewData2, NewData2$dayType2 == "Weekend")
-weekdays <- subset(NewData2, NewData2$dayType2 == "Weekday")
+y_new <- aggregate(steps ~ interval + dayType2, NewData, mean)
 
-j <- tapply(weekdays$steps, weekdays$interval, mean)
-k <- tapply(weekends$steps, weekends$interval, mean)
-
-par(mfrow=c(2,1), mar = c(4, 4, 1, 2), bty="o", bg="white", col.main="black")
-plot(k, type="l", main="Weekends", cex.main=.75, cex.lab=.75, cex.axis=.6, ylab="Number of Steps", xlab="")
-plot(j, type="l", main="Weekdays", cex.main=.75, cex.lab=.75, cex.axis=.6, xlab="Interval", ylab="Number of Steps")
+library(ggplot2)
+qplot(interval, steps, data=y_new, facets = dayType2~., geom="path")
 ```

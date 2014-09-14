@@ -15,37 +15,28 @@ activity <- read.csv("activity.csv")
 
 
 ```r
-x <- tapply(activity$steps, activity$date, sum)
-hist(x, main = "Total Number of Steps per Day", breaks = 60, col = "red", xlab = "Total number of steps")
+x <- aggregate(steps ~ date, activity, sum)
+hist(x$steps, main = "Total Number of Steps per Day", breaks = 60, col = "red", 
+    xlab = "Total number of steps")
 ```
 
 ![plot of chunk unnamed-chunk-2](figure/unnamed-chunk-2.png) 
 
 
-2. Calculate and report the **mean** and **median** total number of steps taken per day
-
+2. Calculate and report the **mean** and **median** total number of steps taken per day.
 
 
 ```r
-mean(as.numeric(x), na.rm = TRUE)
+summary(x$steps)
 ```
 
 ```
-## [1] 10766
+##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##      41    8840   10800   10800   13300   21200
 ```
 
 
-Median =
-
-```r
-median(as.numeric(x), na.rm = TRUE)
-```
-
-```
-## [1] 10765
-```
-
-
+- In the summary above, we see that the mean and median are 10,800.
 
 ## What is the average daily activity pattern?
 
@@ -53,29 +44,32 @@ median(as.numeric(x), na.rm = TRUE)
 
 
 ```r
-y <- tapply(activity$steps, activity$interval, mean, na.rm = TRUE)
-plot(y, type = "l", main = "Average Daily Activity Pattern", cex.main = 0.75, 
-    cex.lab = 0.75, cex.axis = 0.6, ylab = "Number of Steps", xlab = "Interval")
+y <- aggregate(steps ~ interval, activity, mean)
+plot(y$interval, y$steps, type = "l", main = "Average Daily Activity Pattern", 
+    cex.main = 0.75, cex.lab = 0.75, cex.axis = 0.6, ylab = "Average Number of Steps", 
+    xlab = "5-Minute Interval")
 ```
 
-![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-5.png) 
+![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-4.png) 
 
 
 2. Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
 
 
 ```r
-subset(y, y == max(y))
+# locate the index of the dataframe with the max value
+maxIndex <- which.max(y$steps)
+# get the max value and interval using the index
+y[maxIndex, ]
 ```
 
 ```
-##   835 
-## 206.2
+##     interval steps
+## 104      835 206.2
 ```
 
 
-From this we see that the 5-minute interval containing the maximum number of steps is 835 (with a max value of about 206). 
-
+- From the above we see that the 5-minute interval containing the maximum number of steps is 835 (with a max value of about 206). 
 
 ## Imputing missing values
 
@@ -97,45 +91,32 @@ summary(na)
 ##  NA's :0
 ```
 
-The summary tells us that the number of missing values (TRUE) is 2304.
+- The summary tells us that the number of missing values (TRUE) is 2,304.
 
 
 2. Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
 
-For this, the average of a given day was used to fill in missing values for that day. 
-
-To calculate the average number of steps taken per day:
-
-```r
-date_steps <- aggregate(steps ~ date, activity, mean)
-```
+- Each missing value in the new dataframe will be replaced with the mean number of steps for its 5-minute interval.
 
 
 3. Create a new dataset that is equal to the original dataset but with the missing data filled in.
 
 
 ```r
+# creates a new dataframe equal to the original
+NewData <- data.frame(activity)
 
-NewData2 <- data.frame(activity)
+# checks each row of the new dataframe for missing values and replaces it
+# with the average number of steps for the given 5-minute interval
+# (referenced from the 'y_new' dataset containing avg steps by interval,
+# made earlier to generate the time series plot)
 
-# create new dataset equal to original but with missing data filled in
-
-for (i in 1:nrow(NewData2)) {
-    if (is.na(NewData2$steps[i])) {
-        # print (NewData2$steps[i]) print (i)
-        date_Value <- NewData2$date[i]  #correct
-        # print (date_Value) indexing <- subset(date_steps, date_steps ==
-        # date_Value)
-        indexing <- which(date_steps$date == date_Value)  #correct
-        # print (ind)
-        if (length(indexing) > 0) {
-            meanValue <- date_steps$steps[indexing]  #correct
-            # print (meanValue)
-            NewData2$steps[i] <- meanValue  #correct
-            # print (NewData2$steps[i])
-        } else {
-            NewData2$steps[i] <- 0
-        }
+for (i in 1:nrow(NewData)) {
+    if (is.na(NewData$steps[i])) {
+        interval <- NewData$interval[i]
+        index <- which(y$interval == interval)
+        avgSteps <- y$steps[index]
+        NewData$steps[i] <- avgSteps
     }
 }
 ```
@@ -145,38 +126,38 @@ for (i in 1:nrow(NewData2)) {
 
 
 ```r
-x2 <- tapply(NewData2$steps, NewData2$date, sum)
-hist(x2, main = "Total Number of Steps per Day", breaks = 60, col = "red", xlab = "Total number of steps")
+x_new <- aggregate(steps ~ date, NewData, sum)
+hist(x_new$steps, main = "Total Number of Steps per Day", breaks = 60, col = "red", 
+    xlab = "Total number of steps")
 ```
 
-![plot of chunk unnamed-chunk-10](figure/unnamed-chunk-10.png) 
-
+![plot of chunk unnamed-chunk-8](figure/unnamed-chunk-8.png) 
 
 
 
 ```r
-mean(x2)
+# original
+summary(x$steps)
 ```
 
 ```
-## [1] 9354
+##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##      41    8840   10800   10800   13300   21200
 ```
-
-Mean = 9354.23
-
 
 ```r
-median(x2)
+
+# new
+summary(x_new$steps)
 ```
 
 ```
-## [1] 10395
+##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##      41    9820   10800   10800   12800   21200
 ```
 
-Median = 10395
 
-These values differ from the estimated Mean (10766.19) and Median (10765) values earlier. This makes sense given that new estimated values were introduced into the dataset in place of missing values. 
-
+- Above, we can see that the strategy to replace missing values worked very well, since the new estimated mean value and estimated median value are still 10,800. This makes sense given that the mean values from the original dataframe were simply used to replace all of the missing values. 
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
@@ -186,15 +167,15 @@ For this part the weekdays() function may be of some help here. Use the dataset 
 
 
 ```r
-NewData2$date <- as.Date(NewData2$date, "%Y-%m-%d")
-NewData2$day <- weekdays(NewData2$date)
-NewData2$dayType2 <- c("")
+NewData$date <- as.Date(NewData$date, "%Y-%m-%d")
+NewData$day <- weekdays(NewData$date)
+NewData$dayType2 <- c("")
 
-for (i in 1:nrow(NewData2)) {
-    if (NewData2$day[i] == "Saturday" | NewData2$day[i] == "Sunday") {
-        NewData2$dayType2[i] <- "Weekend"
+for (i in 1:nrow(NewData)) {
+    if (NewData$day[i] == "Saturday" | NewData$day[i] == "Sunday") {
+        NewData$dayType2[i] <- "Weekend"
     } else {
-        NewData2$dayType2[i] <- "Weekday"
+        NewData$dayType2[i] <- "Weekday"
     }
 }
 ```
@@ -204,18 +185,11 @@ for (i in 1:nrow(NewData2)) {
 
 
 ```r
-weekends <- subset(NewData2, NewData2$dayType2 == "Weekend")
-weekdays <- subset(NewData2, NewData2$dayType2 == "Weekday")
+y_new <- aggregate(steps ~ interval + dayType2, NewData, mean)
 
-j <- tapply(weekdays$steps, weekdays$interval, mean)
-k <- tapply(weekends$steps, weekends$interval, mean)
-
-par(mfrow = c(2, 1), mar = c(4, 4, 1, 2), bty = "o", bg = "white", col.main = "black")
-plot(k, type = "l", main = "Weekends", cex.main = 0.75, cex.lab = 0.75, cex.axis = 0.6, 
-    ylab = "Number of Steps", xlab = "")
-plot(j, type = "l", main = "Weekdays", cex.main = 0.75, cex.lab = 0.75, cex.axis = 0.6, 
-    xlab = "Interval", ylab = "Number of Steps")
+library(ggplot2)
+qplot(interval, steps, data = y_new, facets = dayType2 ~ ., geom = "path")
 ```
 
-![plot of chunk unnamed-chunk-14](figure/unnamed-chunk-14.png) 
+![plot of chunk unnamed-chunk-11](figure/unnamed-chunk-11.png) 
 
