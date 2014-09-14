@@ -108,7 +108,7 @@ NewData <- data.frame(activity)
 
 # checks each row of the new dataframe for missing values and replaces it
 # with the average number of steps for the given 5-minute interval
-# (referenced from the 'y_new' dataset containing avg steps by interval,
+# (referenced from the 'y' dataset containing avg steps by interval,
 # made earlier to generate the time series plot)
 
 for (i in 1:nrow(NewData)) {
